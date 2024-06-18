@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from rest_framework.viewsets import ModelViewSet
 
-# Create your views here.
+from trip.models import Route
+from trip.serializers import RouteSerializer
+
+
+class RouteViewSet(ModelViewSet):
+  queryset = Route.objects.all()
+  serializer_class = RouteSerializer
