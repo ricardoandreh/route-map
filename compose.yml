@@ -1,0 +1,98 @@
+name: route-map
+
+networks:
+  appnet:
+    driver: bridge
+
+volumes:
+  pgdata:
+  pgadmindata:
+
+configs:
+  pgpass:
+    content: ${DB_HOST-db}:${DB_PORT:-5432}:${DB_NAME}:${DB_USER}:${DB_PASSWORD}
+  servers.json:
+    content: |
+      {
+        "Servers": {
+          "1": {
+            "Name": "route-map",
+            "Group": "Servers",
+            "Port": ${DB_PORT:-5432},
+            "Username": "${DB_USER}",
+            "Host": "${DB_HOST-db}",
+            "SSLMode": "prefer",
+            "MaintenanceDB": "postgres",
+            "PassFile": "/pgpass"
+          }
+        }
+      }
+
+services:
+  # web:
+  #   build: .
+  #   image: route-map
+  #   networks:
+  #     - appnet
+  #   volumes:
+  #     - webdata:/app/data/
+  #   ports:
+  #     - 8000:8000
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+
+  db:
+    hostname: ${DB_HOST:-db}
+    image: docker.io/postgres:16.3-alpine3.20
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    networks:
+      - appnet
+    volumes:
+      - pgdata:/var/lib/postgresql/data/
+    ports:
+      - ${DB_PORT:-5432}:5432
+    healthcheck:
+      test: psql -d ${DB_NAME} -U ${DB_USER} -c 'SELECT 1' || exit 1
+      interval: 3s
+      timeout: 1s
+      retries: 2
+      start_period: 2s
+
+  pgadmin:
+    image: docker.io/dpage/pgadmin4:8.9
+    restart: on-failure
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${DJANGO_SUPERUSER_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
+      PGADMIN_DEFAULT_PASSWORD_FILE: "/pgpass"
+      PGADMIN_LISTEN_ADDRESS: 0.0.0.0
+      PGADMIN_LISTEN_PORT: 5050
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    tty: true
+    user: root
+    entrypoint: >
+      sh -c "
+        chmod 600 /pgpass;
+        /entrypoint.sh;
+        chown pgadmin:pgadmin /pgpass;
+      "
+    configs:
+      - source: servers.json
+        target: /pgadmin4/servers.json
+      - source: pgpass
+        target: /pgpass
+    volumes:
+      - pgadmindata:/var/lib/pgadmin/
+    ports:
+      - 5050:5050
+    networks:
+      - appnet
+    depends_on:
+      db:
+        condition: service_healthy
