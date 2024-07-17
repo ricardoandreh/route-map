@@ -1,7 +1,6 @@
-from django.urls import reverse
-from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
-
+from django.contrib.auth.models import User
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -15,16 +14,16 @@ class RouteTests(APITestCase):
         self.user = User.objects.create(
             username="rick",
             email="rick@email.com",
-            password=make_password("strongpass123")
+            password=make_password("strongpass123"),
         )
         self.base_data = {
             "user": self.user.id,
             "trip": {
                 "origin": {
-                    "address" : "6633+Hollywood+Boulevard",
+                    "address": "6633+Hollywood+Boulevard",
                 },
                 "destination": {
-                    "address" : "234+Vine+Street",
+                    "address": "234+Vine+Street",
                 },
                 "intermediates": [
                     {"address": "204+Marshall+Road"},
@@ -75,4 +74,6 @@ class RouteTests(APITestCase):
         """
         response = self.client.post(self.url, self.base_data, format="json")
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Route.objects.get().trip["origin"]["address"], "6633+Hollywood+Boulevard")
+        self.assertEqual(
+            Route.objects.get().trip["origin"]["address"], "6633+Hollywood+Boulevard"
+        )

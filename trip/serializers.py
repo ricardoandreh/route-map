@@ -4,6 +4,6 @@ from trip.models import Route
 
 
 class RouteSerializer(ModelSerializer):
-  class Meta:
-    model = Route
-    fields = "__all__"
+    class Meta:
+        model = Route
+        fields = "__all__"
