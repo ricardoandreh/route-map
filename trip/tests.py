@@ -1,7 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import User
 from django.urls import reverse
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.test import APITestCase
 
 from trip.models import Route
@@ -25,11 +25,6 @@ class RouteTests(APITestCase):
                 "destination": {
                     "address": "234+Vine+Street",
                 },
-                "intermediates": [
-                    {"address": "204+Marshall+Road"},
-                    {"address": "31+West+Street"},
-                    {"address": "776+Miracle+Mile"},
-                ],
                 "travelMode": "DRIVE",
                 "routingPreference": "TRAFFIC_AWARE",
             },
@@ -58,15 +53,26 @@ class RouteTests(APITestCase):
         self.assertEqual(len(response.data), 4)
         self.assertEqual(response.data, serializer.data)
 
-    def test_route_schema(self):
+    def test_json_trip_schema(self):
         """
-        Ensure we can only create a route object with the right schema.
+        Ensure we can only maintain a trip field with the right JSON schema.
         """
         data = self.base_data
+        del data["trip"]["origin"]["address"]
+
+        with self.assertRaisesMessage(
+            serializers.ValidationError, "'address' is a required property"
+        ):
+            serializer = RouteSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
+
         del data["trip"]["origin"]
 
-        response = self.client.post(self.url, data, format="json")
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        with self.assertRaisesMessage(
+            serializers.ValidationError, "'origin' is a required property"
+        ):
+            serializer = RouteSerializer(data=data)
+            serializer.is_valid(raise_exception=True)
 
     def test_create_route(self):
         """
